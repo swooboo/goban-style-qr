@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -143,14 +144,23 @@ class GobanRenderer(QRRenderer):
         )
 
     @staticmethod
+    def _load_logo(logo_options: LogoOptions) -> Image.Image:
+        if logo_options.image_bytes is not None:
+            return Image.open(io.BytesIO(logo_options.image_bytes)).convert("RGBA")
+        if logo_options.image_path is not None:
+            return Image.open(Path(logo_options.image_path)).convert("RGBA")
+        raise ValueError("logo options must define image_path or image_bytes")
+
+    @classmethod
     def _paste_logo(
+        cls,
         image: Image.Image,
         logo_options: LogoOptions,
         reserved_area: ReservedArea,
         module_size: int,
         border_modules: int,
     ) -> None:
-        logo = Image.open(Path(logo_options.image_path)).convert("RGBA")
+        logo = cls._load_logo(logo_options)
         available_size = max(
             1,
             int((reserved_area.width - 2 * logo_options.padding_modules) * module_size),

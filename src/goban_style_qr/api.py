@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Sequence
+from dataclasses import replace
+from typing import Any, Sequence
 
 import qrcode
 from PIL import Image
 
 from goban_style_qr.config import LogoOptions, QRCodeOptions, RenderOptions
+from goban_style_qr.presets import get_render_preset
 from goban_style_qr.renderers import GobanRenderer, QRRenderer
 
 _ERROR_CORRECTION_MAP = {
@@ -26,6 +28,7 @@ def resolve_error_correction(level: str) -> int:
         raise ValueError(f"Unsupported error correction level: {level}") from exc
 
 
+
 def make_qr_matrix(data: str, *, options: QRCodeOptions | None = None) -> Sequence[Sequence[bool]]:
     """Build a QR matrix for *data*."""
 
@@ -41,6 +44,17 @@ def make_qr_matrix(data: str, *, options: QRCodeOptions | None = None) -> Sequen
     return qr.get_matrix()
 
 
+
+def merge_render_options(base: RenderOptions, **overrides: Any) -> RenderOptions:
+    """Create a new ``RenderOptions`` with a small set of overrides applied."""
+
+    theme_overrides = overrides.pop("theme", None)
+    theme = replace(base.theme, **theme_overrides) if theme_overrides else base.theme
+    valid_overrides = {key: value for key, value in overrides.items() if value is not None}
+    return replace(base, theme=theme, **valid_overrides)
+
+
+
 def generate_qr_image(
     data: str,
     *,
@@ -54,9 +68,10 @@ def generate_qr_image(
     matrix = make_qr_matrix(data, options=qr_options)
     return (renderer or GobanRenderer()).render(
         matrix,
-        render_options=render_options or RenderOptions(),
+        render_options=render_options or get_render_preset(),
         logo_options=logo_options,
     )
+
 
 
 def save_qr_image(image: Image.Image, destination: str) -> None:

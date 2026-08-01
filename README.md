@@ -2,13 +2,15 @@
 
 Create QR codes that look like positions from the game of Go (Baduk/Goban).
 
+The default renderer now aims to match the original prototype more closely: full circular stones, warm wood tones, a visible grid, and a deterministic white-stone layout that still preserves QR readability.
+
 ## Installation
 
 ```bash
 pip install goban-style-qr
 ```
 
-For local development:
+For local development and tests:
 
 ```bash
 pip install -e .[dev]
@@ -17,37 +19,54 @@ pip install -e .[dev]
 ## Python API
 
 ```python
-from goban_style_qr import LogoOptions, QRCodeOptions, RenderOptions, generate_qr_image
+from goban_style_qr import LogoOptions, QRCodeOptions, generate_qr_image, get_render_preset
 
 image = generate_qr_image(
     "https://example.com",
     qr_options=QRCodeOptions(error_correction="H"),
-    render_options=RenderOptions(
-        module_size=18,
-        border_modules=4,
-        white_stone_ratio=0.12,
-        seed=42,
-    ),
-    logo_options=LogoOptions("examples/logo.png", reserved_modules=9, padding_modules=0.5),
+    render_options=get_render_preset("example"),
+    logo_options=LogoOptions(image_path="examples/logo.png", reserved_modules=9, padding_modules=1.0),
 )
 image.save("goban-qr.png")
 ```
 
+## Presets
+
+The library ships with a few opinionated presets:
+
+- `example` - default prototype-inspired look
+- `compact` - smaller output for tighter layouts
+- `high-contrast` - lower white-stone density with a sharper board palette
+
+You can start from a preset and override individual settings in the CLI or your own code.
+
 ## Command line usage
 
 ```bash
+goban-style-qr "https://example.com" goban-qr.png --preset example
+```
+
+Optional overrides still work:
+
+```bash
 goban-style-qr "https://example.com" goban-qr.png \
-  --white-stone-ratio 0.12 \
+  --preset example \
+  --white-stone-ratio 0.15 \
   --seed 42 \
   --logo examples/logo.png
 ```
 
-## Public API
+## Browser UI for Android or other mobile browsers
 
-- `generate_qr_image(data, ...)` renders a PIL image.
-- `make_qr_matrix(data, ...)` exposes the generated QR matrix.
-- `RenderOptions`, `QRCodeOptions`, `BoardTheme`, and `LogoOptions` configure rendering.
-- `GobanRenderer` provides the default Goban-style renderer and can be replaced later with other renderers.
+Run the lightweight web app locally or on a small host:
+
+```bash
+goban-style-qr-web --host 0.0.0.0 --port 8000
+```
+
+Then open `http://<your-host>:8000` from your Android browser. The web app uses the same Python rendering engine and presets as the library and CLI, supports text/URL input, optional logo upload, and PNG download.
+
+For a simple first deployment, use the command above on a small VPS or a platform that can run a Python web process.
 
 ## Example images
 
@@ -59,3 +78,11 @@ goban-style-qr "https://example.com" goban-qr.png \
 ```bash
 pytest
 ```
+
+The test suite covers:
+
+- deterministic rendering behavior
+- preset defaults
+- browser generation flow
+- decode-based scannability with OpenCV
+- visual regression against a reference image

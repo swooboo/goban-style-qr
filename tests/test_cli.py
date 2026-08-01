@@ -10,7 +10,7 @@ from goban_style_qr.cli import main
 def test_cli_creates_output_file(tmp_path: Path) -> None:
     output_path = tmp_path / "cli.png"
 
-    exit_code = main(["https://example.com", str(output_path), "--white-stone-ratio", "0.1", "--seed", "5"])
+    exit_code = main(["https://example.com", str(output_path), "--preset", "example", "--white-stone-ratio", "0.1", "--seed", "5"])
 
     assert exit_code == 0
     assert output_path.exists()
