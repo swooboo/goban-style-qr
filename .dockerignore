@@ -1,0 +1,9 @@
+.git
+tests/
+examples/
+*.egg-info/
+__pycache__/
+*.py[cod]
+build/
+dist/
+.pytest_cache/

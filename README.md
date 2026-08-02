@@ -68,6 +68,22 @@ Then open `http://<your-host>:8000` from your Android browser. The web app uses 
 
 For a simple first deployment, use the command above on a small VPS or a platform that can run a Python web process.
 
+### Deploy on Railway
+
+1. Fork or push the repo to your GitHub account.
+2. Go to [railway.com](https://railway.com) → **New Project** → **Deploy from GitHub repo** → select your repo.
+3. Railway auto-detects the `Dockerfile` and builds the image.
+4. Under **Settings → Networking**, click **Generate Domain** to get a public URL.
+
+No environment variables are required. Railway injects `PORT` automatically and the container reads it at startup.
+
+To run the image locally with Docker:
+
+```bash
+docker build -t goban-style-qr .
+docker run -p 8000:8000 -e PORT=8000 goban-style-qr
+```
+
 ## Example images
 
 - `examples/basic.png`
