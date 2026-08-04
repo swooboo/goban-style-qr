@@ -133,3 +133,42 @@ def test_web_post_root_renders_result_section_for_noscript_fallback() -> None:
     assert response.status_code == 200
     assert b'id="result"' in response.data
     assert b"Download PNG" in response.data
+
+
+def test_web_generate_endpoint_keeps_working_with_persisted_logo_only() -> None:
+    app = create_app()
+    client = app.test_client()
+    logo = Image.new("RGBA", (16, 16), (120, 40, 200, 255))
+    buffer = io.BytesIO()
+    logo.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    first = client.post(
+        "/generate",
+        data={
+            "data": "https://example.com/repeat",
+            "preset": "example",
+            "error_correction": "H",
+            "logo": (buffer, "logo.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert first.status_code == 200
+    payload1 = first.get_json()
+    assert payload1 is not None
+
+    second = client.post(
+        "/generate",
+        data={
+            "data": "https://example.com/repeat",
+            "preset": "example",
+            "error_correction": "H",
+            "logo_data": payload1["logo_data_uri"],
+        },
+        content_type="multipart/form-data",
+    )
+    assert second.status_code == 200
+    payload2 = second.get_json()
+    assert payload2 is not None
+    assert payload2["logo_data_uri"] == payload1["logo_data_uri"]
+    assert payload2["image_data"]

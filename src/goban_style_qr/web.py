@@ -275,6 +275,8 @@ def _render_page(
             resultImageEl.src = dataUrl;
             downloadEl.href = dataUrl;
             var hiddenLogoEl = formEl.querySelector('input[name="logo_data"]');
+            var fileInputEl = formEl.querySelector('input[name="logo"]');
+            var logoStateEl = formEl.querySelector('.logo-state');
             if (hiddenLogoEl) {{
               if (payload.logo_data_uri) {{
                 hiddenLogoEl.value = payload.logo_data_uri;
@@ -287,6 +289,17 @@ def _render_page(
               hiddenLogoEl.name = 'logo_data';
               hiddenLogoEl.value = payload.logo_data_uri;
               formEl.insertBefore(hiddenLogoEl, formEl.firstChild);
+            }}
+            if (payload.logo_data_uri && fileInputEl) {{
+              fileInputEl.value = '';
+            }}
+            if (logoStateEl) {{
+              if (payload.logo_data_uri) {{
+                var previewEl = logoStateEl.querySelector('.logo-preview');
+                if (previewEl) previewEl.src = payload.logo_data_uri;
+              }} else {{
+                logoStateEl.remove();
+              }}
             }}
             resultEl.hidden = false;
             resultEl.scrollIntoView({{ block: 'start', behavior: 'smooth' }});
