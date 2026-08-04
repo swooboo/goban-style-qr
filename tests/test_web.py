@@ -20,6 +20,8 @@ def test_web_index_loads() -> None:
     assert b'id="qr-form"' in response.data
     assert b'id="result" hidden' in response.data
     assert b"fetch('/generate'" in response.data
+    assert b"formData.delete('logo_data')" in response.data
+    assert b"persistedLogoData" in response.data
 
 
 def test_web_generation_returns_preview_and_download_link() -> None:

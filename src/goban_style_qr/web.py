@@ -258,17 +258,28 @@ def _render_page(
         var resultEl = document.getElementById('result');
         var resultImageEl = document.getElementById('result-image');
         var downloadEl = resultEl ? resultEl.querySelector('.download-link') : null;
+        var persistedLogoData = {json.dumps(logo_data_uri)};
         function updatePlaceholders() {{
           var d = presets[presetEl.value] || {{}};
           ratioEl.placeholder = d.white_stone_ratio || '';
           seedEl.placeholder = d.seed || '';
+        }}
+        function buildFormData() {{
+          var formData = new FormData(formEl);
+          formData.delete('logo_data');
+          var fileInputEl = formEl.querySelector('input[name="logo"]');
+          var hasSelectedFile = fileInputEl && fileInputEl.files && fileInputEl.files.length > 0;
+          if (!hasSelectedFile && persistedLogoData) {{
+            formData.set('logo_data', persistedLogoData);
+          }}
+          return formData;
         }}
         async function handleSubmit(event) {{
           event.preventDefault();
           buttonEl.disabled = true;
           statusEl.textContent = 'Generating PNG…';
           try {{
-            var response = await fetch('/generate', {{ method: 'POST', body: new FormData(formEl) }});
+            var response = await fetch('/generate', {{ method: 'POST', body: buildFormData() }});
             if (!response.ok) throw new Error('Request failed');
             var payload = await response.json();
             var dataUrl = 'data:image/png;base64,' + payload.image_data;
@@ -277,26 +288,27 @@ def _render_page(
             var hiddenLogoEl = formEl.querySelector('input[name="logo_data"]');
             var fileInputEl = formEl.querySelector('input[name="logo"]');
             var logoStateEl = formEl.querySelector('.logo-state');
+            persistedLogoData = payload.logo_data_uri || '';
             if (hiddenLogoEl) {{
-              if (payload.logo_data_uri) {{
-                hiddenLogoEl.value = payload.logo_data_uri;
+              if (persistedLogoData) {{
+                hiddenLogoEl.value = persistedLogoData;
               }} else {{
                 hiddenLogoEl.remove();
               }}
-            }} else if (payload.logo_data_uri) {{
+            }} else if (persistedLogoData) {{
               hiddenLogoEl = document.createElement('input');
               hiddenLogoEl.type = 'hidden';
               hiddenLogoEl.name = 'logo_data';
-              hiddenLogoEl.value = payload.logo_data_uri;
+              hiddenLogoEl.value = persistedLogoData;
               formEl.insertBefore(hiddenLogoEl, formEl.firstChild);
             }}
-            if (payload.logo_data_uri && fileInputEl) {{
+            if (fileInputEl) {{
               fileInputEl.value = '';
             }}
             if (logoStateEl) {{
-              if (payload.logo_data_uri) {{
+              if (persistedLogoData) {{
                 var previewEl = logoStateEl.querySelector('.logo-preview');
-                if (previewEl) previewEl.src = payload.logo_data_uri;
+                if (previewEl) previewEl.src = persistedLogoData;
               }} else {{
                 logoStateEl.remove();
               }}
