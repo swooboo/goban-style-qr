@@ -22,6 +22,7 @@ def test_web_index_loads() -> None:
     assert b"fetch('/generate'" in response.data
     assert b"formData.delete('logo_data')" in response.data
     assert b"persistedLogoData" in response.data
+    assert b"if (hiddenLogoEl) hiddenLogoEl.remove();" in response.data
 
 
 def test_web_generation_returns_preview_and_download_link() -> None:

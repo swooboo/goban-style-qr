@@ -259,6 +259,8 @@ def _render_page(
         var resultImageEl = document.getElementById('result-image');
         var downloadEl = resultEl ? resultEl.querySelector('.download-link') : null;
         var persistedLogoData = {json.dumps(logo_data_uri)};
+        var hiddenLogoEl = formEl.querySelector('input[name="logo_data"]');
+        if (hiddenLogoEl) hiddenLogoEl.remove();
         function updatePlaceholders() {{
           var d = presets[presetEl.value] || {{}};
           ratioEl.placeholder = d.white_stone_ratio || '';
@@ -285,23 +287,9 @@ def _render_page(
             var dataUrl = 'data:image/png;base64,' + payload.image_data;
             resultImageEl.src = dataUrl;
             downloadEl.href = dataUrl;
-            var hiddenLogoEl = formEl.querySelector('input[name="logo_data"]');
             var fileInputEl = formEl.querySelector('input[name="logo"]');
             var logoStateEl = formEl.querySelector('.logo-state');
             persistedLogoData = payload.logo_data_uri || '';
-            if (hiddenLogoEl) {{
-              if (persistedLogoData) {{
-                hiddenLogoEl.value = persistedLogoData;
-              }} else {{
-                hiddenLogoEl.remove();
-              }}
-            }} else if (persistedLogoData) {{
-              hiddenLogoEl = document.createElement('input');
-              hiddenLogoEl.type = 'hidden';
-              hiddenLogoEl.name = 'logo_data';
-              hiddenLogoEl.value = persistedLogoData;
-              formEl.insertBefore(hiddenLogoEl, formEl.firstChild);
-            }}
             if (fileInputEl) {{
               fileInputEl.value = '';
             }}
