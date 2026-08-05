@@ -3,9 +3,8 @@ from __future__ import annotations
 import argparse
 import base64
 import io
-from html import escape
 
-from flask import Flask, request
+from flask import Flask, jsonify, request
 
 from goban_style_qr.api import generate_qr_image, merge_render_options
 from goban_style_qr.cli import PRESET_CHOICES
@@ -24,8 +23,8 @@ def create_app() -> Flask:
     def index() -> str:
         return _render_page()
 
-    @app.post("/")
-    def generate() -> str:
+    @app.post("/generate")
+    def generate():
         data = request.form.get("data", _DEFAULT_DATA).strip() or _DEFAULT_DATA
         preset = request.form.get("preset", "example")
         white_ratio = _parse_optional_float(request.form.get("white_stone_ratio"))
@@ -56,14 +55,7 @@ def create_app() -> Flask:
         image_bytes = io.BytesIO()
         image.save(image_bytes, format="PNG")
         encoded = base64.b64encode(image_bytes.getvalue()).decode("ascii")
-        return _render_page(
-            data=data,
-            preset=preset,
-            error_correction=error_correction,
-            white_stone_ratio="" if white_ratio is None else str(white_ratio),
-            seed="" if seed is None else str(seed),
-            image_data=encoded,
-        )
+        return jsonify({"image": encoded})
 
     return app
 
@@ -86,28 +78,11 @@ def _parse_optional_int(value: str | None) -> int | None:
 
 
 
-def _render_page(
-    *,
-    data: str = _DEFAULT_DATA,
-    preset: str = "example",
-    error_correction: str = "H",
-    white_stone_ratio: str = "",
-    seed: str = "",
-    image_data: str | None = None,
-) -> str:
+def _render_page() -> str:
     preset_options = "".join(
-        f'<option value="{name}"{" selected" if name == preset else ""}>{name.title()}</option>'
+        f'<option value="{name}">{name.title()}</option>'
         for name in PRESET_CHOICES
     )
-    image_markup = ""
-    if image_data:
-        image_markup = f"""
-        <section class=\"result\">
-          <h2>Preview</h2>
-          <img alt=\"Generated goban QR code\" src=\"data:image/png;base64,{image_data}\" />
-          <p><a download=\"goban-style-qr.png\" href=\"data:image/png;base64,{image_data}\">Download PNG</a></p>
-        </section>
-        """
 
     return f"""
 <!doctype html>
@@ -123,43 +98,79 @@ def _render_page(
       label {{ display: block; font-weight: 600; margin-top: .9rem; }}
       input, select, button {{ width: 100%; font: inherit; padding: .8rem; margin-top: .35rem; box-sizing: border-box; }}
       button {{ background: #6d4c2f; color: white; border: 0; border-radius: .75rem; cursor: pointer; }}
+      button:disabled {{ opacity: .6; cursor: default; }}
       img {{ width: 100%; height: auto; display: block; margin-top: 1rem; border-radius: .75rem; background: #e0c090; }}
       a {{ color: #6d4c2f; font-weight: 600; }}
       .hint {{ color: #5b534b; font-size: .95rem; }}
+      .result {{ margin-top: 1rem; }}
+      #error-msg {{ color: #b00; margin-top: .5rem; }}
     </style>
   </head>
   <body>
     <main>
       <h1>Goban Style QR</h1>
       <p class=\"hint\">Generate a Go-board style QR code from your Android browser.</p>
-      <form method=\"post\" enctype=\"multipart/form-data\">
+      <form id=\"qr-form\" action=\"generate\" enctype=\"multipart/form-data\">
         <label for=\"data\">Text or URL</label>
-        <input id=\"data\" name=\"data\" value=\"{escape(data)}\" required />
+        <input id=\"data\" name=\"data\" value=\"https://example.com\" required />
 
         <label for=\"preset\">Preset</label>
         <select id=\"preset\" name=\"preset\">{preset_options}</select>
 
         <label for=\"error_correction\">Error correction</label>
         <select id=\"error_correction\" name=\"error_correction\">
-          <option value=\"L\"{" selected" if error_correction == "L" else ""}>L</option>
-          <option value=\"M\"{" selected" if error_correction == "M" else ""}>M</option>
-          <option value=\"Q\"{" selected" if error_correction == "Q" else ""}>Q</option>
-          <option value=\"H\"{" selected" if error_correction == "H" else ""}>H</option>
+          <option value=\"L\">L</option>
+          <option value=\"M\">M</option>
+          <option value=\"Q\">Q</option>
+          <option value=\"H\" selected>H</option>
         </select>
 
         <label for=\"white_stone_ratio\">White stone ratio (optional override)</label>
-        <input id=\"white_stone_ratio\" name=\"white_stone_ratio\" inputmode=\"decimal\" value=\"{escape(white_stone_ratio)}\" placeholder=\"preset default\" />
+        <input id=\"white_stone_ratio\" name=\"white_stone_ratio\" inputmode=\"decimal\" placeholder=\"preset default\" />
 
         <label for=\"seed\">Random seed (optional override)</label>
-        <input id=\"seed\" name=\"seed\" inputmode=\"numeric\" value=\"{escape(seed)}\" placeholder=\"preset default\" />
+        <input id=\"seed\" name=\"seed\" inputmode=\"numeric\" placeholder=\"preset default\" />
 
         <label for=\"logo\">Transparent logo (optional)</label>
         <input id=\"logo\" type=\"file\" name=\"logo\" accept=\"image/png,image/webp,image/jpeg\" />
 
-        <button type=\"submit\">Generate PNG</button>
+        <button type=\"submit\" id=\"submit-btn\">Generate PNG</button>
+        <p id=\"error-msg\" hidden></p>
       </form>
-      {image_markup}
+      <section class=\"result\" id=\"result\" hidden>
+        <h2>Preview</h2>
+        <img id=\"result-img\" alt=\"Generated goban QR code\" />
+        <p><a id=\"result-download\" download=\"goban-style-qr.png\">Download PNG</a></p>
+      </section>
     </main>
+    <script>
+      document.getElementById('qr-form').addEventListener('submit', async function(e) {{
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const errEl = document.getElementById('error-msg');
+        btn.disabled = true;
+        btn.textContent = 'Generating\u2026';
+        errEl.hidden = true;
+        try {{
+          const resp = await fetch('generate', {{ method: 'POST', body: new FormData(this) }});
+          if (!resp.ok) {{
+            const detail = await resp.text().catch(() => '');
+            throw new Error('Server error ' + resp.status + (detail ? ': ' + detail : ''));
+          }}
+          const {{ image }} = await resp.json();
+          const src = 'data:image/png;base64,' + image;
+          document.getElementById('result-img').src = src;
+          document.getElementById('result-download').href = src;
+          document.getElementById('result').hidden = false;
+        }} catch (err) {{
+          errEl.textContent = 'Error: ' + err.message;
+          errEl.hidden = false;
+        }} finally {{
+          btn.disabled = false;
+          btn.textContent = 'Generate PNG';
+        }}
+      }});
+    </script>
   </body>
 </html>
 """
