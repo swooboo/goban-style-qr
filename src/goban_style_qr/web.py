@@ -122,7 +122,7 @@ def _render_page(
       form, .result {{ background: white; border-radius: 1rem; padding: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,.08); }}
       label {{ display: block; font-weight: 600; margin-top: .9rem; }}
       input, select, button {{ width: 100%; font: inherit; padding: .8rem; margin-top: .35rem; box-sizing: border-box; }}
-      button {{ background: #6d4c2f; color: white; border: 0; border-radius: .75rem; }}
+      button {{ background: #6d4c2f; color: white; border: 0; border-radius: .75rem; cursor: pointer; }}
       img {{ width: 100%; height: auto; display: block; margin-top: 1rem; border-radius: .75rem; background: #e0c090; }}
       a {{ color: #6d4c2f; font-weight: 600; }}
       .hint {{ color: #5b534b; font-size: .95rem; }}
