@@ -27,7 +27,7 @@ def test_web_generation_returns_preview_and_download_link() -> None:
     buffer.seek(0)
 
     response = client.post(
-        "/",
+        "/generate",
         data={
             "data": "https://example.com/browser",
             "preset": "example",
@@ -40,5 +40,7 @@ def test_web_generation_returns_preview_and_download_link() -> None:
     )
 
     assert response.status_code == 200
-    assert b"data:image/png;base64," in response.data
-    assert b"Download PNG" in response.data
+    data = response.get_json()
+    assert data is not None
+    assert "image" in data
+    assert len(data["image"]) > 0
